@@ -59,7 +59,7 @@ a:hover { text-decoration-color: var(--pink); }
 /* ── Hero ── */
 .hero { --u: 3px; position: relative; overflow: hidden; background: var(--sky); text-align: center; padding-top: clamp(1.5rem, 5vw, 3.5rem); }
 .hero::before {
-  content: ""; position: absolute; display: none; top: 1.5rem; right: 2rem; width: calc(16 * var(--u)); height: calc(15 * var(--u));
+  content: ""; position: absolute; display: none; top: 1.5rem; right: 2rem; width: calc(15 * var(--u)); height: calc(15 * var(--u));
   background: url(sun.png) 0 0 / 100% 100% no-repeat; image-rendering: pixelated;
 }
 .hero > .wrap { position: relative; }

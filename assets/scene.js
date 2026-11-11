@@ -9,7 +9,7 @@
   const hero = canvas.parentElement;
   const reduceMotion = matchMedia("(prefers-reduced-motion: reduce)").matches;
 
-  const GH = 113, GROUND = 97, HORIZON = 77;      // logical rows, pillar top, waterline
+  const GH = 113, GROUND = 77, HORIZON = 57;      // logical rows, pillar top, waterline
   const CAT_W = 24, CAT_H = 18, DOG_W = 24, BIRD_W = 16;
   const GROW = 62, WALK = 50, ROT = 0.32, SCROLL = 0.4;
   const JUMP_T = 0.72, JUMP_H = 32, DOG_SPEED = 64, BIRD_SPEED = 92;
@@ -290,7 +290,7 @@
   // ── The self-playing game ─────────────────────────────────────────
   let seed = 7;
   const rnd = (a, b) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return a + (seed / 4294967296) * (b - a); };
-  let pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
+  let bridges = [], pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
 
   function addPillar() {
     const last = pillars[pillars.length - 1], i = made++;
@@ -302,7 +302,7 @@
   const next = () => pillars[pillars.indexOf(base) + 1];
   const dogHomeX = (p) => p.x + Math.max(2, Math.round((p.w - DOG_W) / 2));
   function reset() {
-    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1;
+    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1; bridges = [];
     dog = null; bird = null; warn = 0; clock = 0;
     pillars = [{ x: 10, w: 34, kind: "plain", canvas: pillarCanvas(34, 99) }]; made = 1;
     while (pillars[pillars.length - 1].x < GW * 2.5) addPillar();
@@ -311,8 +311,17 @@
   const catScreen = () => heroX - cam;
   const blocked = () => warn > 0 || (dog && dog.state !== "flee") || (bird && bird.x + BIRD_W > catScreen());
 
+  // The scroll sweeps the cat left across the screen; do not start it while an enemy is in that path.
+  function sweepBlocked() {
+    const to = 36, from = catScreen();
+    const hit = (x, w) => x + w > to - 4 && x < from + CAT_W;
+    return (bird && hit(bird.x, BIRD_W)) || (dog && hit(dog.x - cam, DOG_W));
+  }
+
   function startWalk() {
     const n = next();
+    const pivot = base.x + base.w - 1;
+    bridges.push({ x0: pivot, x1: Math.round(pivot + stick) }); stick = 0;
     walkTo = n.x + n.w - CAT_W + 2; phase = "walking"; pt = 0;
     if (n.kind === "dog") dog = { x: dogHomeX(n), state: "alert", t: 0.3, pillar: n };
     if (n.kind === "bird") warn = 0.95;
@@ -334,8 +343,8 @@
     if (jt < 0 && phase !== "growing" && phase !== "rotating") {
       // start the hop so the enemy is under the cat for the middle of the arc, whatever the closing speed
       const move = phase === "walking" ? WALK : 0;
-      if (dog && dog.state === "charge" && dog.x - (heroX + CAT_W - 2) <= (DOG_SPEED + move) * 0.1) jt = 0;
-      else if (bird && bird.x > catScreen() && bird.x - (catScreen() + CAT_W - 2) <= (BIRD_SPEED + move) * 0.12) jt = 0;
+      if (dog && dog.state === "charge" && !dog.hopped && dog.x - (heroX + CAT_W - 2) <= (DOG_SPEED + move) * 0.1) { jt = 0; dog.hopped = true; }
+      else if (bird && !bird.hopped && bird.x > catScreen() && bird.x - (catScreen() + CAT_W - 2) <= (BIRD_SPEED + move) * 0.12) { jt = 0; bird.hopped = true; }
     }
     if (jt >= 0) { jt += dt; if (jt >= JUMP_T) jt = -1; }
 
@@ -354,14 +363,48 @@
       heroX = Math.min(walkTo, heroX + WALK * dt);
       if (heroX >= walkTo) { phase = "arrived"; pt = 0; }
     } else if (phase === "arrived") {
-      if (pt > 0.25 && !blocked()) {
+      if (pt > 0.25 && !blocked() && !sweepBlocked()) {
         base = next(); stick = 0; angle = 0; phase = "scrolling"; pt = 0; camFrom = cam; camTo = heroX - 36;
         while (pillars[pillars.length - 1].x < camTo + GW * 2.5) addPillar();
       }
     } else if (phase === "scrolling") {
       const k = Math.min(1, pt / SCROLL); cam = camFrom + (camTo - camFrom) * (1 - (1 - k) ** 3);
-      if (k >= 1) { phase = "idle"; pt = 0; pillars = pillars.filter((p) => p.x + p.w > cam - 12 || p === base); }
+      if (k >= 1) { phase = "idle"; pt = 0; pillars = pillars.filter((p) => p.x + p.w > cam - 12 || p === base); bridges = bridges.filter((b) => b.x1 > cam - 12); }
     }
+  }
+
+  // Wooden log wrapped in a vine, ported from PixelRenderer.stick: 3px cross-section (lit edge, body,
+  // shadow edge), bark grain, a pale cut end, and the vine crossing the front once every 6px.
+  const VINE_LIGHT = "#8ED67A", GRAIN = "#7A4420", VINE_TURN = 6;
+  function linePoints(x0, y0, x1, y1) {
+    const pts = [], dx = Math.abs(x1 - x0), dy = -Math.abs(y1 - y0), sx = x0 < x1 ? 1 : -1, sy = y0 < y1 ? 1 : -1;
+    let x = x0, y = y0, err = dx + dy;
+    while (pts.length < 4096) {
+      pts.push([x, y]);
+      if (x === x1 && y === y1) break;
+      const e2 = 2 * err;
+      if (e2 >= dy) { err += dy; x += sx; }
+      if (e2 <= dx) { err += dx; y += sy; }
+    }
+    return pts;
+  }
+  function drawStick(x0, y0, x1, y1) {
+    const steep = Math.abs(y1 - y0) > Math.abs(x1 - x0), pts = linePoints(x0, y0, x1, y1), last = pts.length - 1;
+    pts.forEach(([x, y], index) => {
+      const cell = (c, o) => (steep ? rect(x + o, y, 1, 1, c) : rect(x, y + o, 1, 1, c));
+      cell(P.stickShade, 1);
+      if (index === last && index > 0) { cell(P.stickEnd, -1); cell(P.stickEnd, 0); return; }
+      const phase = index % VINE_TURN, wound = index >= 2 && index < last - 1;
+      if (wound && phase === 0) { cell(VINE_LIGHT, -1); cell(P.stickBody, 0); }
+      else if (wound && phase === 1) { cell(P.vine, -1); cell(VINE_LIGHT, 0); }
+      else if (wound && phase === 2) { cell(P.stickLight, -1); cell(P.vine, 0); cell(P.vine, 1); }
+      else if (wound && phase === 3) { cell(P.stickLight, -1); cell(P.stickBody, 0); cell(P.vine, 1); }
+      else { cell(P.stickLight, -1); cell(index % 5 === 3 ? GRAIN : P.stickBody, 0); }
+      if (wound && phase === 1) {
+        const side = !steep || Math.floor(index / VINE_TURN) % 2 === 0 ? -1 : 1;
+        cell(P.vine, 2 * side); cell(VINE_LIGHT, 3 * side);
+      }
+    });
   }
 
   function drawWorld() {
@@ -378,15 +421,15 @@
       // the dog waits on its pillar until the bridge lands
       if (p.kind === "dog" && !(dog && dog.pillar === p) && p !== base && !p.dogGone && (aiming && p === target)) spr(DOG_A, dogHomeX(p) - cam, GROUND - 18);
     }
-    // stick: log with a vine, pivot on the base pillar's right edge
-    if (stick > 0) {
-      const ox = base.x + base.w - 1 - cam, len = Math.round(stick), vertical = angle < Math.PI / 4;
-      for (let i = 0; i < len; i++) {
-        const x = Math.round(ox + Math.sin(angle) * i), y = Math.round(GROUND - 2 - Math.cos(angle) * i);
-        const end = i === len - 1, vine = i % 5 === 2;
-        const L = end ? P.stickEnd : P.stickLight, B = vine ? P.vine : end ? P.stickEnd : P.stickBody;
-        if (vertical) { rect(x - 1, y, 1, 1, L); rect(x, y, 1, 1, B); rect(x + 1, y, 1, 1, P.stickShade); }
-        else { rect(x, y - 1, 1, 1, L); rect(x, y, 1, 1, B); rect(x, y + 1, 1, 1, P.stickShade); }
+    // bridges already laid stay across their gaps, like in the game
+    for (const br of bridges) drawStick(Math.round(br.x0 - cam), GROUND - 1, Math.round(br.x1 - cam), GROUND - 1);
+    if (stick >= 1) {
+      const px = Math.round(base.x + base.w - 1 - cam), py = GROUND - 1;
+      const tx = Math.round(px + Math.sin(angle) * stick), ty = Math.round(py - Math.cos(angle) * stick);
+      drawStick(px, py, tx, ty);
+      if (phase === "growing") {
+        if (Math.floor(clock * 8) % 2 === 0) { rect(tx - 1, ty - 3, 3, 1, P.white); rect(tx, ty - 4, 1, 3, P.white); }
+        else rect(tx, ty - 3, 1, 1, P.yellowLight);
       }
     }
     if (dog) {
