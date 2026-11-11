@@ -264,7 +264,7 @@
     const bs = GW + BALLOON.width * 2;
     spr(BALLOON, Math.round(wrap(GW * 0.55 + t * 1.6 - cam * 0.1, bs)) - BALLOON.width, 23 + Math.round(Math.sin(t * 0.9) * 1.5));
     const lead = Math.round(wrap(GW * 0.2 + t * 7 - cam * 0.15, GW + 40)) - 20, glide = Math.round(Math.sin(t * 0.7) * 3);
-    [[0, 0], [-7, 3], [-13, -1]].forEach(([dx, dy], i) => spr(BIRD_FAR[(Math.floor(t * 5) + i) % 2], lead + dx, 3 + glide + dy));
+    [[0, 0], [-7, 3], [-13, -1]].forEach(([dx, dy], i) => spr(BIRD_FAR[(Math.floor(t * 5) + i) % 2], lead + dx, 19 + glide + dy));
     town(GW, cam);
     ridge(RIDGE_TREE, GW, cam, t, P.trees, P.treesLight, 2, 0);
     const off = cam * RIDGE_TREE.parallax;
@@ -290,7 +290,7 @@
   // ── The self-playing game ─────────────────────────────────────────
   let seed = 7;
   const rnd = (a, b) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return a + (seed / 4294967296) * (b - a); };
-  let bridges = [], pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
+  let score = 0, bridges = [], pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
 
   function addPillar() {
     const last = pillars[pillars.length - 1], i = made++;
@@ -302,7 +302,7 @@
   const next = () => pillars[pillars.indexOf(base) + 1];
   const dogHomeX = (p) => p.x + Math.max(2, Math.round((p.w - DOG_W) / 2));
   function reset() {
-    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1; bridges = [];
+    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1; bridges = []; score = 0;
     dog = null; bird = null; warn = 0; clock = 0;
     pillars = [{ x: 10, w: 34, kind: "plain", canvas: pillarCanvas(34, 99) }]; made = 1;
     while (pillars[pillars.length - 1].x < GW * 2.5) addPillar();
@@ -330,12 +330,16 @@
   function step(dt) {
     clock += dt; pt += dt;
     if (warn > 0) { warn -= dt; if (warn <= 0) bird = { x: GW + 2, y: GROUND - 22 }; }
-    if (bird) { bird.x -= BIRD_SPEED * dt; if (bird.x < -BIRD_W - 4) bird = null; }
+    if (bird) {
+      bird.x -= BIRD_SPEED * dt;
+      if (bird.hopped && !bird.scored && bird.x + BIRD_W - 3 < catScreen() + 4) { bird.scored = true; score++; }
+      if (bird.x < -BIRD_W - 4) bird = null;
+    }
     if (dog) {
       if (dog.state === "alert") { dog.t -= dt; if (dog.t <= 0) dog.state = "charge"; }
       else {
         dog.x -= DOG_SPEED * dt;
-        if (dog.state === "charge" && dog.x + DOG_W - 4 < heroX + 2) dog.state = "flee";
+        if (dog.state === "charge" && dog.x + DOG_W - 4 < heroX + 2) { dog.state = "flee"; if (dog.hopped) score++; }
         if (dog.x - cam < -DOG_W - 4) dog = null;
       }
     }
@@ -361,7 +365,7 @@
       if (pt >= ROT) startWalk();
     } else if (phase === "walking") {
       heroX = Math.min(walkTo, heroX + WALK * dt);
-      if (heroX >= walkTo) { phase = "arrived"; pt = 0; }
+      if (heroX >= walkTo) { phase = "arrived"; pt = 0; score++; }
     } else if (phase === "arrived") {
       if (pt > 0.25 && !blocked() && !sweepBlocked()) {
         base = next(); stick = 0; angle = 0; phase = "scrolling"; pt = 0; camFrom = cam; camTo = heroX - 36;
@@ -445,7 +449,25 @@
     spr(f, heroX - cam, GROUND - CAT_H - lift);
   }
 
-  function draw() { paintBackdrop(clock, cam); drawWorld(); }
+  // Score, drawn like the game HUD: big white digits at the top centre.
+  const DIGITS = {
+    0: ".###.|#...#|#...#|#...#|#...#|#...#|.###.", 1: "..#..|.##..|..#..|..#..|..#..|..#..|.###.",
+    2: ".###.|#...#|....#|...#.|..#..|.#...|#####", 3: "#####|...#.|..#..|...#.|....#|#...#|.###.",
+    4: "...#.|..##.|.#.#.|#..#.|#####|...#.|...#.", 5: "#####|#....|####.|....#|....#|#...#|.###.",
+    6: "..##.|.#...|#....|####.|#...#|#...#|.###.", 7: "#####|....#|...#.|..#..|.#...|.#...|.#...",
+    8: ".###.|#...#|#...#|.###.|#...#|#...#|.###.", 9: ".###.|#...#|#...#|.####|....#|...#.|.##..",
+  };
+  function drawScore() {
+    const label = String(score).padStart(3, "0"), k = 2, w = (label.length * 6 - 1) * k;
+    const x0 = Math.floor((GW - w) / 2);
+    for (const [dx, dy, col] of [[1, 1, P.navy], [0, 0, P.white]]) {
+      [...label].forEach((ch, i) => DIGITS[ch].split("|").forEach((row, y) => {
+        for (let x = 0; x < 5; x++) if (row[x] === "#") rect(x0 + dx + (i * 6 + x) * k, 3 + dy + y * k, k, k, col);
+      }));
+    }
+  }
+
+  function draw() { paintBackdrop(clock, cam); drawWorld(); drawScore(); }
 
   // ── Sizing and loop ───────────────────────────────────────────────
   function resize() {
