@@ -55,12 +55,19 @@
     return loading;
   }
 
-  async function enable() {
+  // iOS Safari only lets audio start inside the tap itself, so everything that starts sound runs
+  // before the first await: create and unlock the context, start the music, then wait for the effects.
+  function enable() {
     on = true; paint(); store.set(true);
-    await load();
-    if (!on || !ctx) return;
-    try { await ctx.resume(); } catch (e) { /* ignore */ }
-    try { await music.play(); } catch (e) { /* needs another gesture */ }
+    const pending = load();
+    if (ctx) {
+      try { ctx.resume(); } catch (e) { /* ignore */ }
+      try { // a one-sample silent buffer unlocks Web Audio on iOS
+        const s = ctx.createBufferSource(); s.buffer = ctx.createBuffer(1, 1, 22050); s.connect(ctx.destination); s.start(0);
+      } catch (e) { /* ignore */ }
+    }
+    if (music) { const p = music.play(); if (p && p.catch) p.catch(() => {}); }
+    return pending;
   }
   function disable() {
     on = false; paint(); store.set(false);
@@ -89,12 +96,13 @@
     // Remember the choice: if sound was on last time, start it at the first tap anywhere on the page.
     if (store.get()) {
       on = true;
+      const EVENTS = ["click", "touchend", "keydown"];
       const resume = (e) => {
         if (btn.contains(e.target)) return;
-        removeEventListener("pointerdown", resume, true); removeEventListener("keydown", resume, true);
+        EVENTS.forEach((n) => removeEventListener(n, resume, true));
         if (on) enable();
       };
-      addEventListener("pointerdown", resume, true); addEventListener("keydown", resume, true);
+      EVENTS.forEach((n) => addEventListener(n, resume, true));
     }
     // Pause the music while the tab is hidden.
     document.addEventListener("visibilitychange", () => {
