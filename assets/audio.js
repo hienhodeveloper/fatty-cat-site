@@ -1,5 +1,5 @@
 // Fatty Cat site: the game's sound effects and chiptune loop, with a floating mute button.
-// Sound starts off. Browsers only allow audio after a tap, so the button is also the opt-in.
+// Sound is on by default; browsers only let it start at the first tap, so it begins then. The choice is remembered.
 (() => {
   "use strict";
   const BASE = "assets/audio/";
@@ -12,11 +12,11 @@
   };
   const MUSIC_VOLUME = 0.35, KEY = "fattycat.sound";
   const btn = document.getElementById("sound");
-  let on = false, ctx = null, loading = null, music = null;
+  let on = true, started = false, ctx = null, loading = null, music = null;
   const buffers = {}, playing = {};
 
   const store = {
-    get() { try { return localStorage.getItem(KEY) === "1"; } catch (e) { return false; } },
+    get() { try { return localStorage.getItem(KEY) !== "0"; } catch (e) { return true; } },
     set(v) { try { localStorage.setItem(KEY, v ? "1" : "0"); } catch (e) { /* private mode */ } },
   };
 
@@ -58,7 +58,7 @@
   // iOS Safari only lets audio start inside the tap itself, so everything that starts sound runs
   // before the first await: create and unlock the context, start the music, then wait for the effects.
   function enable() {
-    on = true; paint(); store.set(true);
+    on = true; started = true; paint(); store.set(true);
     const pending = load();
     if (ctx) {
       try { ctx.resume(); } catch (e) { /* ignore */ }
@@ -92,15 +92,17 @@
   window.FattyAudio = { play, stop };
 
   if (btn) {
-    btn.addEventListener("click", () => (on ? disable() : enable()));
-    // Remember the choice: if sound was on last time, start it at the first tap anywhere on the page.
-    if (store.get()) {
-      on = true;
+    // While sound is on but has not started yet (no tap so far), the first tap on the button starts it.
+    btn.addEventListener("click", () => { if (on && !started) enable(); else if (on) disable(); else enable(); });
+    // On by default: fetch the effects now, and start everything at the first tap anywhere on the page.
+    on = store.get();
+    if (on) {
+      load();
       const EVENTS = ["click", "touchend", "keydown"];
       const resume = (e) => {
         if (btn.contains(e.target)) return;
         EVENTS.forEach((n) => removeEventListener(n, resume, true));
-        if (on) enable();
+        if (on && !started) enable();
       };
       EVENTS.forEach((n) => addEventListener(n, resume, true));
     }
@@ -110,5 +112,23 @@
       if (document.hidden) music.pause(); else music.play().catch(() => {});
     });
     paint();
+
+    // The button sits at the top right of the demo scene; once that spot scrolls out of view it floats
+    // at the bottom right and follows the visitor.
+    const slot = document.getElementById("scene");
+    let queued = false;
+    const place = () => {
+      queued = false;
+      if (!slot) return;
+      const top = slot.getBoundingClientRect().top + 8, h = btn.offsetHeight || 48;
+      const docked = top >= 0 && top + h <= innerHeight;
+      btn.classList.toggle("docked", docked);
+      if (docked) btn.style.setProperty("--sound-top", top + "px");
+    };
+    const queue = () => { if (!queued) { queued = true; requestAnimationFrame(place); } };
+    addEventListener("scroll", queue, { passive: true });
+    addEventListener("resize", queue);
+    addEventListener("load", queue);
+    place();
   }
 })();

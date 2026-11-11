@@ -106,6 +106,7 @@ a.cta-pulse:hover, a.cta-pulse:focus-visible, a.cta-pulse:active { animation: no
   width: 3rem; height: 3rem; padding: 0.75rem; display: grid; place-items: center; cursor: pointer;
   background: var(--navy); color: var(--white); border: 3px solid var(--lavender); box-shadow: 4px 4px 0 var(--outline);
 }
+.sound.docked { top: var(--sound-top, 1rem); bottom: auto; }
 .sound svg { width: 100%; height: auto; }
 .sound.is-on { background: var(--yellow); color: var(--navy); border-color: var(--outline); }
 .sound:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--outline); }
