@@ -57,7 +57,20 @@ a:hover { text-decoration-color: var(--pink); }
 .nav a:hover, .nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 4px; }
 
 /* ── Hero ── */
-.hero { text-align: center; padding-top: clamp(1.5rem, 5vw, 3.5rem); }
+.hero { --u: 3px; position: relative; overflow: hidden; background: var(--sky); text-align: center; padding-top: clamp(1.5rem, 5vw, 3.5rem); }
+.hero::before {
+  content: ""; position: absolute; display: none; top: 1.5rem; right: 2rem; width: calc(16 * var(--u)); height: calc(15 * var(--u));
+  background: url(sun.png) 0 0 / 100% 100% no-repeat; image-rendering: pixelated;
+}
+.hero > .wrap { position: relative; }
+/* The game's own river scene (cat, dog, bird, pillars), mirrored so it tiles edge to edge */
+.scene {
+  height: calc(113 * var(--u)); margin-top: 1.5rem;
+  background: url(scene.png) calc(2 * var(--u) * 5) bottom / calc(240 * var(--u)) calc(113 * var(--u)) repeat-x;
+  image-rendering: pixelated;
+}
+@media (min-width: 700px) { .hero { --u: 4px; } }
+@media (min-width: 960px) { .hero::before { display: block; } }
 .hero h1 { --px-h: clamp(4.25rem, 15vw, 8.5rem); --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--navy); }
 .lede { max-width: var(--measure); margin: 1.25rem auto 1.75rem; font-size: 1.25rem; }
 .cta {
