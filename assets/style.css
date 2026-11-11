@@ -82,6 +82,31 @@ a.cta:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--outlin
 a.cta:active { transform: translate(5px, 5px); box-shadow: none; }
 .cta-note { display: block; margin-top: 0.9rem; font-size: 0.95rem; }
 
+/* Top button: a hop with a growing shadow, plus a shine sweep, every few seconds. Hover or focus calms it. */
+a.cta { position: relative; overflow: hidden; }
+a.cta-pulse { animation: cta-hop 2.6s cubic-bezier(.3,.7,.4,1) infinite; }
+a.cta-pulse::after {
+  content: ""; position: absolute; top: 0; bottom: 0; left: -60%; width: 40%;
+  background: linear-gradient(100deg, transparent, rgba(255,255,255,.75), transparent);
+  transform: skewX(-20deg); animation: cta-shine 2.6s ease-in-out infinite;
+}
+a.cta-pulse:hover, a.cta-pulse:focus-visible, a.cta-pulse:active { animation: none; }
+@keyframes cta-hop {
+  0%, 55%, 100% { transform: translateY(0); box-shadow: 5px 5px 0 var(--outline); }
+  65% { transform: translateY(-9px); box-shadow: 5px 14px 0 var(--outline); }
+  75% { transform: translateY(0); box-shadow: 5px 5px 0 var(--outline); }
+  84% { transform: translateY(-4px); box-shadow: 5px 9px 0 var(--outline); }
+  92% { transform: translateY(0); box-shadow: 5px 5px 0 var(--outline); }
+}
+@keyframes cta-shine { 0%, 45% { left: -60%; } 70%, 100% { left: 130%; } }
+
+/* ── Closing call to action ── */
+.final { background: var(--navy); color: var(--white); text-align: center; padding-block: clamp(3rem, 9vw, 5rem); }
+.final h2 { --px-h: clamp(1.9rem, 6vw, 3rem); --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--outline); margin-bottom: 1.75rem; }
+.final .cta { box-shadow: 5px 5px 0 var(--pink); border-color: var(--outline); }
+.final .cta:hover { box-shadow: 3px 3px 0 var(--pink); }
+.final .cta-note { color: var(--lavender); }
+
 /* ── Screens ── */
 .screens { background: var(--yellow); padding-block: clamp(3rem, 8vw, 5rem); }
 .screens h2 { --px-h: clamp(1.9rem, 5vw, 2.6rem); }
@@ -160,4 +185,5 @@ details p { margin: 0 0 1rem 1.1rem; }
 }
 @media (prefers-reduced-motion: reduce) {
   a.cta:hover, a.cta:active { transform: none; }
+  a.cta-pulse, a.cta-pulse::after { animation: none; }
 }
