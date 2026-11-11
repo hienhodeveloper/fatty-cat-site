@@ -65,7 +65,7 @@ a:hover { text-decoration-color: var(--pink); }
 .hero > .wrap { position: relative; }
 /* The game's own river scene (cat, dog, bird, pillars), mirrored so it tiles edge to edge */
 .scene {
-  height: calc(113 * var(--u)); margin-top: 1.5rem;
+  display: block; height: calc(113 * var(--u)); margin-top: 1.5rem;
   background: url(scene.png) calc(2 * var(--u) * 5) bottom / calc(240 * var(--u)) calc(113 * var(--u)) repeat-x;
   image-rendering: pixelated;
 }
