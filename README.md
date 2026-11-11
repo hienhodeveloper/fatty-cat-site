@@ -3,7 +3,7 @@
 Static site for the Fatty Cat iOS game, served with GitHub Pages:
 https://hienhodeveloper.github.io/fatty-cat-site/
 
-- `index.html` – marketing page (App Store Marketing URL) with a small playable demo
+- `index.html` – marketing page (App Store Marketing URL)
 - `support.html` – support page (App Store Support URL)
 - `privacy.html` – privacy policy (App Store Privacy Policy URL)
 - `terms.html` – terms of use
