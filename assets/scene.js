@@ -116,6 +116,19 @@
   const LIGHTHOUSE = mk([
     "...L...", "..KLK..", ".KKKKK.", "..WWW..", "..RRR..", "..WWW..", "..RRR..", ".WWWWW.", ".RRRRR.", ".WWWWW.", "KKKKKKK",
   ], { W: "#F4F1E6", R: "#D8414F", K: P.cloudOutline, L: P.yellowLight });
+  // Mood bubble (Sprites.swift): 13x15 bubble with a 9x9 icon two pixels in.
+  const BUBBLE = mk([
+    ".KKKKKKKKKKK.", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK",
+    "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", "KWWWWWWWWWWWK", ".KKKKKWKKKKK.", ".....KWK.....", "......K......",
+  ], { K: P.outline, W: P.white });
+  const MOOD_ICON = {
+    heart: mk([".RRR.RRR.", "RPRRRRRRR", "RPRRRRRRR", "RRRRRRRRR", ".RRRRRRR.", "..RRRRR..", "...RRR...", "....R....", "........."], { R: P.marker, P: "#FF9DCF" }),
+    note: mk(["....KKK..", "....KKKK.", "....K..KK", "....K...K", "....K....", "....K....", "..KKK....", ".KKKK....", "..KK....."], { K: P.navy }),
+    happy: mk(["..KKKKK..", ".KYYYYYK.", "KYYYYYYYK", "KYKYYYKYK", "KYYYYYYYK", "KYKYYYKYK", "KYYKKKYYK", ".KYYYYYK.", "..KKKKK.."], { K: P.outline, Y: P.yellow }),
+  };
+  const snd = (n) => { if (window.FattyAudio) window.FattyAudio.play(n); };
+  const sndStop = (n) => { if (window.FattyAudio) window.FattyAudio.stop(n); };
+
   const BIRD_FAR = [mk(["#...#", ".#.#.", "..#.."], { "#": P.navy }), mk(["..#..", ".#.#.", "#...#"], { "#": P.navy })];
 
   // ── Pillars: grass-topped sandstone, ported from PixelRenderer.pillar ──
@@ -290,7 +303,7 @@
   // ── The self-playing game ─────────────────────────────────────────
   let seed = 7;
   const rnd = (a, b) => { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; return a + (seed / 4294967296) * (b - a); };
-  let score = 0, bridges = [], pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
+  let score = 0, mood = null, stepT = 0, meowAlt = false, perfectNext = false, bridges = [], pillars, made, base, cam, camFrom, camTo, phase, pt, stick, angle, wantLen, heroX, walkTo, jt, dog, bird, warn, clock;
 
   function addPillar() {
     const last = pillars[pillars.length - 1], i = made++;
@@ -302,7 +315,7 @@
   const next = () => pillars[pillars.indexOf(base) + 1];
   const dogHomeX = (p) => p.x + Math.max(2, Math.round((p.w - DOG_W) / 2));
   function reset() {
-    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1; bridges = []; score = 0;
+    cam = camFrom = camTo = 0; phase = "idle"; pt = 0; stick = 0; angle = 0; jt = -1; bridges = []; score = 0; mood = null; stepT = 0;
     dog = null; bird = null; warn = 0; clock = 0;
     pillars = [{ x: 10, w: 34, kind: "plain", canvas: pillarCanvas(34, 99) }]; made = 1;
     while (pillars[pillars.length - 1].x < GW * 2.5) addPillar();
@@ -318,28 +331,33 @@
     return (bird && hit(bird.x, BIRD_W)) || (dog && hit(dog.x - cam, DOG_W));
   }
 
+  function showMood(type) {
+    mood = { type, t0: clock, dur: 1.5 };
+    snd("bubble"); snd(meowAlt ? "meow1" : "meow"); meowAlt = !meowAlt;
+  }
+
   function startWalk() {
     const n = next();
     const pivot = base.x + base.w - 1;
-    bridges.push({ x0: pivot, x1: Math.round(pivot + stick) }); stick = 0;
+    bridges.push({ x0: pivot, x1: Math.round(pivot + stick) }); stick = 0; snd("land");
     walkTo = n.x + n.w - CAT_W + 2; phase = "walking"; pt = 0;
     if (n.kind === "dog") dog = { x: dogHomeX(n), state: "alert", t: 0.3, pillar: n };
-    if (n.kind === "bird") warn = 0.95;
+    if (n.kind === "bird") { warn = 0.95; snd("birdChirp"); }
   }
 
   function step(dt) {
     clock += dt; pt += dt;
-    if (warn > 0) { warn -= dt; if (warn <= 0) bird = { x: GW + 2, y: GROUND - 22 }; }
+    if (warn > 0) { warn -= dt; if (warn <= 0) { bird = { x: GW + 2, y: GROUND - 22 }; snd("birdFly"); } }
     if (bird) {
       bird.x -= BIRD_SPEED * dt;
-      if (bird.hopped && !bird.scored && bird.x + BIRD_W - 3 < catScreen() + 4) { bird.scored = true; score++; }
+      if (bird.hopped && !bird.scored && bird.x + BIRD_W - 3 < catScreen() + 4) { bird.scored = true; score++; snd("dodge"); }
       if (bird.x < -BIRD_W - 4) bird = null;
     }
     if (dog) {
-      if (dog.state === "alert") { dog.t -= dt; if (dog.t <= 0) dog.state = "charge"; }
+      if (dog.state === "alert") { dog.t -= dt; if (dog.t <= 0) { dog.state = "charge"; snd("dog"); } }
       else {
         dog.x -= DOG_SPEED * dt;
-        if (dog.state === "charge" && dog.x + DOG_W - 4 < heroX + 2) { dog.state = "flee"; if (dog.hopped) score++; }
+        if (dog.state === "charge" && dog.x + DOG_W - 4 < heroX + 2) { dog.state = "flee"; if (dog.hopped) { score++; snd("dodge"); } }
         if (dog.x - cam < -DOG_W - 4) dog = null;
       }
     }
@@ -347,25 +365,36 @@
     if (jt < 0 && phase !== "growing" && phase !== "rotating") {
       // start the hop so the enemy is under the cat for the middle of the arc, whatever the closing speed
       const move = phase === "walking" ? WALK : 0;
-      if (dog && dog.state === "charge" && !dog.hopped && dog.x - (heroX + CAT_W - 2) <= (DOG_SPEED + move) * 0.1) { jt = 0; dog.hopped = true; }
-      else if (bird && !bird.hopped && bird.x > catScreen() && bird.x - (catScreen() + CAT_W - 2) <= (BIRD_SPEED + move) * 0.12) { jt = 0; bird.hopped = true; }
+      if (dog && dog.state === "charge" && !dog.hopped && dog.x - (heroX + CAT_W - 2) <= (DOG_SPEED + move) * 0.1) { jt = 0; dog.hopped = true; snd("jump"); }
+      else if (bird && !bird.hopped && bird.x > catScreen() && bird.x - (catScreen() + CAT_W - 2) <= (BIRD_SPEED + move) * 0.12) { jt = 0; bird.hopped = true; snd("jump"); }
     }
     if (jt >= 0) { jt += dt; if (jt >= JUMP_T) jt = -1; }
 
     if (phase === "idle") {
       if (pt > 0.5 && !blocked() && jt < 0) {
         phase = "growing"; pt = 0; stick = 0; angle = 0;
-        const n = next(); wantLen = n.x - (base.x + base.w - 1) + rnd(3, n.w - 3);
+        const n = next(), pivot = base.x + base.w - 1;
+        // half the time aim for the red mark: a perfect landing
+        perfectNext = rnd(0, 1) < 0.5;
+        wantLen = perfectNext ? n.x + Math.floor(n.w / 2) - pivot : n.x - pivot + rnd(3, n.w - 3);
+        snd("grow");
       }
     } else if (phase === "growing") {
       stick += GROW * dt;
-      if (stick >= wantLen) { stick = wantLen; phase = "rotating"; pt = 0; }
+      if (stick >= wantLen) { stick = wantLen; phase = "rotating"; pt = 0; sndStop("grow"); }
     } else if (phase === "rotating") {
       angle = Math.min(1, pt / ROT) ** 2 * Math.PI / 2;
       if (pt >= ROT) startWalk();
     } else if (phase === "walking") {
       heroX = Math.min(walkTo, heroX + WALK * dt);
-      if (heroX >= walkTo) { phase = "arrived"; pt = 0; score++; }
+      stepT += dt;
+      if (stepT >= 0.25 && jt < 0) { stepT = 0; snd(Math.floor(clock * 4) % 2 ? "step" : "stepAlt"); }
+      if (heroX >= walkTo) {
+        phase = "arrived"; pt = 0;
+        score += perfectNext ? 2 : 1;
+        snd(perfectNext ? "perfect" : "score");
+        showMood(perfectNext ? "heart" : score % 10 === 0 ? "note" : "happy");
+      }
     } else if (phase === "arrived") {
       if (pt > 0.25 && !blocked() && !sweepBlocked()) {
         base = next(); stick = 0; angle = 0; phase = "scrolling"; pt = 0; camFrom = cam; camTo = heroX - 36;
@@ -447,6 +476,18 @@
     if (jt >= 0) { const k = jt / JUMP_T; lift = JUMP_H * 4 * k * (1 - k); }
     const f = phase === "walking" && jt < 0 && Math.floor(clock * 8) % 2 ? CAT_WALK_S : CAT_STAND;
     spr(f, heroX - cam, GROUND - CAT_H - lift);
+    if (mood) {
+      const age = clock - mood.t0, left = mood.dur - age;
+      if (left <= 0) mood = null;
+      else {
+        // pops up from the head, bobs, and floats away over the last quarter second
+        const drift = left < 0.25 ? Math.round((1 - left / 0.25) * 7) : 0;
+        const rise = Math.round(Math.max(0, 1 - age / 0.18) * 5), bob = Math.round(Math.sin(clock * 5));
+        const bx = Math.round(heroX - cam) + Math.floor((CAT_W - BUBBLE.width) / 2);
+        const by = GROUND - CAT_H - BUBBLE.height - 1 + rise + bob - drift;
+        spr(BUBBLE, bx, by); spr(MOOD_ICON[mood.type], bx + 2, by + 2);
+      }
+    }
   }
 
   // Score, drawn like the game HUD: big white digits at the top centre.

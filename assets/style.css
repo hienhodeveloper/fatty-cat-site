@@ -100,6 +100,17 @@ a.cta-pulse:hover, a.cta-pulse:focus-visible, a.cta-pulse:active { animation: no
 }
 @keyframes cta-shine { 0%, 45% { left: -60%; } 70%, 100% { left: 130%; } }
 
+/* ── Floating sound button: follows the visitor down the page ── */
+.sound {
+  position: fixed; z-index: 50; right: max(1rem, env(safe-area-inset-right)); bottom: max(1rem, env(safe-area-inset-bottom));
+  width: 3rem; height: 3rem; padding: 0.75rem; display: grid; place-items: center; cursor: pointer;
+  background: var(--navy); color: var(--white); border: 3px solid var(--lavender); box-shadow: 4px 4px 0 var(--outline);
+}
+.sound svg { width: 100%; height: auto; }
+.sound.is-on { background: var(--yellow); color: var(--navy); border-color: var(--outline); }
+.sound:hover { transform: translate(2px, 2px); box-shadow: 2px 2px 0 var(--outline); }
+.sound:active { transform: translate(4px, 4px); box-shadow: none; }
+
 /* ── Closing call to action ── */
 .final { background: var(--navy); color: var(--white); text-align: center; padding-block: clamp(3rem, 9vw, 5rem); }
 .final h2 { --px-h: clamp(1.9rem, 6vw, 3rem); --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--outline); margin-bottom: 1.75rem; }
