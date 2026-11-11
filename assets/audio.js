@@ -32,11 +32,13 @@
   }
   function paint() {
     if (!btn) return;
-    btn.innerHTML = icon(on ? "on" : "off"); // markup built only from the constant icon rows above
-    btn.setAttribute("aria-pressed", String(on));
-    btn.setAttribute("aria-label", on ? "Turn sound off" : "Turn sound on");
-    btn.title = on ? "Sound on" : "Sound off";
-    btn.classList.toggle("is-on", on);
+    const live = on && started; // "on" but not started yet means: waiting for the first tap
+    btn.innerHTML = icon(live ? "on" : "off"); // markup built only from the constant icon rows above
+    btn.setAttribute("aria-pressed", String(live));
+    btn.setAttribute("aria-label", live ? "Turn sound off" : "Turn sound on");
+    btn.title = live ? "Sound on" : on ? "Tap for sound" : "Sound off";
+    btn.classList.toggle("is-on", live);
+    btn.classList.toggle("pending", on && !started);
   }
 
   function load() {
@@ -98,7 +100,7 @@
     on = store.get();
     if (on) {
       load();
-      const EVENTS = ["click", "touchend", "keydown"];
+      const EVENTS = ["pointerdown", "pointerup", "mousedown", "click", "touchend", "keydown"];
       const resume = (e) => {
         if (btn.contains(e.target)) return;
         EVENTS.forEach((n) => removeEventListener(n, resume, true));
