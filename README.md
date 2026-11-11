@@ -9,4 +9,3 @@ https://hienhodeveloper.github.io/fatty-cat-site/
 - `terms.html` – terms of use
 
 No build step, no trackers, no third-party requests. Fonts: Atkinson Hyperlegible (SIL OFL, see `assets/fonts/OFL.txt`).
-When the app is live, replace the "Coming soon to the App Store" span in `index.html` with a link to the App Store page.
