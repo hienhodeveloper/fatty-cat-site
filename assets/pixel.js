@@ -60,7 +60,16 @@
     }
   }
 
-  function svgFor(text, fill, shadow) {
+  function svgFor(text, fill, shadow, logo) {
+    if (logo) {
+      // Same stack as the game's logoText: pink extrude, 1px outline, face on top.
+      let r = "";
+      const put = (dx, dy, c) => eachRun(text, (x, y, rw) => { r += `<rect x="${x + dx + 1}" y="${y + dy + 1}" width="${rw}" height="1" fill="${c}"/>`; });
+      put(1, 2, logo.extrude); put(2, 2, logo.extrude);
+      [[-1,-1],[0,-1],[1,-1],[-1,0],[1,0],[-1,1],[0,1],[1,1]].forEach(([dx, dy]) => put(dx, dy, logo.outline));
+      put(0, 0, fill);
+      return `<svg viewBox="0 0 ${textWidth(text) + 4} 11" aria-hidden="true" focusable="false" shape-rendering="crispEdges">${r}</svg>`;
+    }
     const w = textWidth(text) + (shadow ? 1 : 0), h = 7 + (shadow ? 1 : 0);
     let rects = "";
     if (shadow) eachRun(text, (x, y, rw) => { rects += `<rect x="${x + 1}" y="${y + 1}" width="${rw}" height="1" fill="${shadow}"/>`; });
@@ -74,11 +83,13 @@
     const cs = getComputedStyle(el);
     const fill = cs.getPropertyValue("--px-fill").trim() || "currentColor";
     const shadow = cs.getPropertyValue("--px-shadow").trim() || null;
+    const extrude = cs.getPropertyValue("--px-extrude").trim();
+    const logo = extrude ? { extrude, outline: cs.getPropertyValue("--px-outline").trim() || "#1b1e5e" } : null;
     const label = document.createElement("span");
     label.className = "sr";
     label.textContent = text;
     el.replaceChildren(label);
-    el.insertAdjacentHTML("beforeend", svgFor(text, fill, shadow)); // markup built only from glyph data
+    el.insertAdjacentHTML("beforeend", svgFor(text, fill, shadow, logo)); // markup built only from glyph data
     el.classList.add("px-ready");
   });
 })();

@@ -51,14 +51,14 @@ a:hover { text-decoration-color: var(--pink); }
 }
 .brand { display: flex; align-items: center; gap: 0.6rem; text-decoration: none; }
 .brand img { width: 40px; height: 40px; border-radius: 10px; box-shadow: 3px 3px 0 var(--navy); }
-.brand .px { --px-h: 1.3rem; }
+.brand .px { --px-h: 1.6rem; --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--navy); }
 .nav { display: flex; gap: 1.25rem; font-weight: 700; }
 .nav a { text-decoration: none; padding: 0.4rem 0.1rem; }
 .nav a:hover, .nav a[aria-current] { text-decoration: underline; text-decoration-color: var(--yellow); text-decoration-thickness: 4px; }
 
 /* ── Hero ── */
 .hero { text-align: center; padding-top: clamp(1.5rem, 5vw, 3.5rem); }
-.hero h1 { --px-h: clamp(4.25rem, 15vw, 8.5rem); --px-fill: var(--yellow); --px-shadow: var(--outline); }
+.hero h1 { --px-h: clamp(4.25rem, 15vw, 8.5rem); --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--navy); }
 .lede { max-width: var(--measure); margin: 1.25rem auto 1.75rem; font-size: 1.25rem; }
 .cta {
   display: inline-block; padding: 0.85rem 1.5rem; font-weight: 700; font-size: 1.125rem;
@@ -104,7 +104,7 @@ a.cta:active { transform: translate(5px, 5px); box-shadow: none; }
 
 /* ── Text pages ── */
 .page { padding-block: clamp(2rem, 6vw, 4rem) clamp(3rem, 8vw, 5rem); }
-.page h1 { --px-h: clamp(2.6rem, 9vw, 4rem); --px-fill: var(--yellow); --px-shadow: var(--outline); }
+.page h1 { --px-h: clamp(2.6rem, 9vw, 4rem); --px-fill: var(--yellow); --px-extrude: var(--pink); --px-outline: var(--navy); }
 .sheet {
   background: var(--white); border: 4px solid var(--navy); box-shadow: 8px 8px 0 var(--navy);
   padding: clamp(1.25rem, 4vw, 2.5rem); margin-top: 1.75rem; max-width: 46rem;
