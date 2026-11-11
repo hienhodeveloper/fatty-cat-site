@@ -69,18 +69,6 @@ a.cta:hover { transform: translate(2px, 2px); box-shadow: 3px 3px 0 var(--outlin
 a.cta:active { transform: translate(5px, 5px); box-shadow: none; }
 .cta-note { display: block; margin-top: 0.9rem; font-size: 0.95rem; }
 
-.stage { margin-top: clamp(2rem, 6vw, 3.5rem); }
-#play {
-  display: block; width: 100%; height: clamp(15rem, 30vw, 18rem);
-  image-rendering: pixelated; cursor: pointer;
-  touch-action: none; user-select: none; -webkit-user-select: none; -webkit-touch-callout: none;
-}
-#play:focus-visible { outline-offset: -6px; box-shadow: none; }
-.stage-hint {
-  margin: 0; padding: 0.7rem 1rem; text-align: center; font-size: 0.95rem;
-  background: var(--navy); color: var(--white);
-}
-
 /* ── Screens ── */
 .screens { background: var(--yellow); padding-block: clamp(3rem, 8vw, 5rem); }
 .screens h2 { --px-h: clamp(1.9rem, 5vw, 2.6rem); }
